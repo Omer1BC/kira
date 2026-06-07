@@ -1,0 +1,33 @@
+{
+  "name": "hexcode",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx src/index.tsx"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Omer1BC/hexcode.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Omer1BC/hexcode/issues"
+  },
+  "homepage": "https://github.com/Omer1BC/hexcode#readme",
+  "devDependencies": {
+    "nodemon": "^3.1.14",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "@types/react": "^19.2.14",
+    "axios": "^1.15.2",
+    "ink": "^7.0.1",
+    "react": "^19.2.5",
+    "tsx": "^4.21.0"
+  }
+}
