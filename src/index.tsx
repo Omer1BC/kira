@@ -1,38 +1,40 @@
 import React, {useState} from 'react';
 import {render, Text, Box, useInput, useApp} from 'ink';
 import axios from 'axios'
+import {GoogleGenAI} from '@google/genai'
+type Role = 'user' | 'model';
 
 type Message = {
 	id: number;
 	text: string;
-	fromMe: boolean;
+	role: Role;
 	time: string;
 };
+
+type StreamChunk = {
+	event_type: string;
+	delta?: string;
+};
+
+const client = new GoogleGenAI({
+  apiKey: process.env.GOOGLE_API_KEY ?? ""
+});
 
 const getTime = () =>
 	new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 
-async function getResponse(input:string) {
-    const resp = await axios.post("http://localhost:8000/api/v1/threads/1/runs/prompt",{
-        data: input
-
-    }
-    )
-    return resp.data.data.responses[0].data
-} 
-
 const Bubble = ({msg}: {msg: Message}) => (
 	<Box
 		flexDirection="column"
-		alignItems={msg.fromMe ? 'flex-end' : 'flex-start'}
+		alignItems={msg.role === 'user' ? 'flex-end' : 'flex-start'}
 		marginBottom={1}
-	>
+		>
 		<Box
 			borderStyle="round"
-			borderColor={msg.fromMe ? 'blue' : 'gray'}
+			borderColor={msg.role === 'user' ? 'blue' : 'gray'}
 			paddingX={1}
 		>
-			<Text color={msg.fromMe ? 'blueBright' : 'white'}>{msg.text}</Text>
+			<Text color={msg.role === 'user' ? 'blueBright' : 'white'}>{msg.text}</Text>
 		</Box>
 		<Text dimColor>{msg.time}</Text>
 	</Box>
@@ -44,31 +46,78 @@ const App = () => {
 	]);
 	const [input, setInput] = useState('');
 
+
+	const updateHistory =  async (stream : any) => {
+
+		for await (const chunk of stream) {
+
+			switch (chunk.event_type) {
+				case "step.start":
+					if (chunk.step?.type === 'model_output') {
+						setMessages((prev) => [
+							...prev,
+							{id: prev.length+1,text: "", role: 'model',time: getTime()}
+						])
+					}
+					break;
+				case "step.delta":
+					setMessages((prev) => {
+						const updated = [...prev]
+						const last = updated[updated.length-1]
+						if (!last) return prev
+
+						const delta = chunk.delta?.type === 'text' ? chunk.delta.text : ''
+
+						updated[updated.length-1] = {
+							...last,
+							text: last.text + delta
+						};
+
+						return updated
+					})
+					break;
+				default:
+					break;	
+			}
+		}
+	}
+
+	async function * streamResponse(userInput: string) {
+		const stream = await client.interactions.create({
+		model: "gemini-3.5-flash",
+		input: userInput,
+		stream: true,
+		});
+
+		for await (const chunk of stream) {
+			yield chunk
+		}
+
+	}
+	
+	const handleQuery = async (userInput: string) => {
+		const trimmedInput = userInput.trim()
+		setInput('')
+
+		if (trimmedInput) {
+		setMessages((prev) => [
+			...prev,
+			{id: prev.length+1,text: trimmedInput, role: 'user',time: getTime()}
+		])
+			const stream = streamResponse(trimmedInput)
+			updateHistory(stream)
+		}
+
+
+	}
+
 	useInput(async (char, key) => {
 		if (key.escape) {
 			exit();
 			return;
 		}
 		if (key.return) {
-            const trimmedInput = input.trim()
-			if (trimmedInput) {
-				setMessages(prev => [
-					...prev,
-					{id: prev.length + 1, text:trimmedInput, fromMe: true, time: getTime()},
-
-				]);
-
-
-            
-                const res = await getResponse(trimmedInput)
-                setMessages(prev => [
-                    ...prev,
-                    {id: prev.length+2, text: res,fromMe: false,time:getTime()}
-                    ]
-                )
-
-				setInput('');
-			}
+			await handleQuery(input)
 			return;
 		}
 		if (key.backspace || key.delete) {

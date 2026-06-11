@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx src/index.tsx"
+    "dev": "tsx --env-file=.env src/index.tsx"
   },
   "repository": {
     "type": "git",
@@ -24,6 +24,7 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
+    "@google/genai": "^2.8.0",
     "@types/react": "^19.2.14",
     "axios": "^1.15.2",
     "ink": "^7.0.1",
