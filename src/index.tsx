@@ -18,8 +18,6 @@ const client = new GoogleGenAI({
   apiKey: process.env.GOOGLE_API_KEY ?? ""
 });
 
-const chat = client.chats.create({model: "gemini-3.5-flash"});
-
 const getTime = () =>
 	new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 
@@ -67,12 +65,21 @@ const App = () => {
 		}
 	}
 
-	async function * streamResponse(userInput: string) {
+	async function * streamResponse(userInput: string, history: Message[]) {
 		const signal = controller.signal
 
+		const contents = [
+			...history.map(m => ({
+				role: m.role,
+				parts: [{text: m.text}],
+			})),
+			{role: 'user', parts: [{text: userInput}]},
+		]
+
 		try {
-			const stream = await chat.sendMessageStream({
-				message: userInput,
+			const stream = await client.models.generateContentStream({
+				model: "gemini-3.5-flash",
+				contents,
 				config: {abortSignal: signal},
 			});
 
@@ -99,7 +106,7 @@ const App = () => {
 			...prev,
 			{id: prev.length+1,text: trimmedInput, role: 'user',time: getTime()}
 		])
-			const stream = streamResponse(trimmedInput)
+			const stream = streamResponse(trimmedInput, messages)
 			updateHistory(stream)
 		}
 
