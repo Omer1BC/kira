@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx --env-file=.env src/index.tsx"
+    "dev": "tsx --env-file=.env src/index.tsx",
+    "debug": "node --inspect --import tsx/esm --env-file=.env src/index.tsx"
   },
   "repository": {
     "type": "git",
