@@ -14,10 +14,11 @@ export interface Tool {
 	role: 'tool';
 	status: Status;
 	function: string;
-	time: string;	
+	time: string;
 	args: Record<string, unknown>;
 	controller: AbortController;
-	value: string
+	value: string;
+	thoughtSignature?: string;
 }
 
 

@@ -3,7 +3,7 @@ import type { RefObject } from 'react';
 import type { Tool, Message, History } from './messages.js';
 import { time, newId } from './metadata.js';
 import { Model } from './Model.js';
-import type { Content, FunctionCall, GenerateContentResponse } from '@google/genai';
+import type { Content, Part, GenerateContentResponse } from '@google/genai';
 import { definitions } from './Tools.js';
 
 const MODEL =  "gemini-3.1-flash-lite"
@@ -33,9 +33,10 @@ export class GeminiModel extends Model<Content> {
 		 	})
 			const respId = newId()
 			for await (const chunk of stream ) {
-				if (chunk.functionCalls?.length)
-					for (const toolCall of chunk.functionCalls) {
-						yield this._normalizeToolChunk(newId(),toolCall)
+				const fnParts = chunk.candidates?.[0]?.content?.parts?.filter(p => p.functionCall) ?? []
+				if (fnParts.length)
+					for (const part of fnParts) {
+						yield this._normalizeToolChunk(newId(), part)
 					}
 				else if (chunk.text) {
 					yield this._normalizeResponseChunk(respId,chunk)
@@ -51,25 +52,32 @@ export class GeminiModel extends Model<Content> {
 		return {id,role: 'model',value: chunk.text!,time: time()}
 	}
 
-	_normalizeToolChunk(id: string,chunk:FunctionCall) : Tool {
-		return { id, status: 'loaded', role: 'tool', time: time(), function: chunk.name!, args: chunk.args!, controller: new AbortController(), value: '' }
+	_normalizeToolChunk(id: string, part: Part): Tool {
+		return { id, status: 'loaded', role: 'tool', time: time(), function: part.functionCall!.name!, args: part.functionCall!.args!, thoughtSignature: part.thoughtSignature, controller: new AbortController(), value: '' }
 	}
 
 	normalizeHistory(history: History[]): Content[] {
-		return this.filterHistory(history)
+		const filtered = this.filterHistory(history)
 			.filter(elem => elem.role !== 'tool' || (elem as Tool).status === 'complete')
-			.flatMap((elem): Content[] => {
-				switch (elem.role) {
-					case 'user':
-					case 'model':
-						return [{ role: elem.role, parts: [{ text: elem.value }] }];
-					case 'tool':
-						return [
-							{ role: 'model', parts: [{ functionCall: { name: elem.function, args: elem.args } }] },
-							{ role: 'user', parts: [{ functionResponse: { name: elem.function, response: { result: elem.value } } }] }
-						];
+
+		const result: Content[] = []
+		let i = 0
+		while (i < filtered.length) {
+			const elem = filtered[i]
+			if (elem.role === 'tool') {
+				const group: Tool[] = []
+				while (i < filtered.length && filtered[i].role === 'tool') {
+					group.push(filtered[i] as Tool)
+					i++
 				}
-			});
+				result.push({ role: 'model', parts: group.map(t => ({ functionCall: { name: t.function, args: t.args }, thoughtSignature: t.thoughtSignature })) })
+				result.push({ role: 'user',  parts: group.map(t => ({ functionResponse: { name: t.function, response: { result: t.value } } })) })
+			} else {
+				result.push({ role: elem.role as 'user' | 'model', parts: [{ text: elem.value }] })
+				i++
+			}
+		}
+		return result
 	}
 
 

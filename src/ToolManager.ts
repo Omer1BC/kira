@@ -35,6 +35,7 @@ export class ToolManager {
 			}, {once: true})
 		}
 
+
 		for (const id of this.queue) {
 			const decision = await new Promise<Approval>(resolve => {
 				this.#emitter.once(id, resolve)
