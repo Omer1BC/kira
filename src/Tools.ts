@@ -1,7 +1,8 @@
 import type { FunctionDeclaration } from '@google/genai';
-import { spawn,exec } from 'child_process';
+import { spawn,exec,} from 'child_process';
+import {promisify } from 'util';
+
 import {readFile, writeFile} from 'fs/promises'
-import { promisify } from 'util';
 
 export const definitions: FunctionDeclaration[] = [
 	{
@@ -50,8 +51,8 @@ export const definitions: FunctionDeclaration[] = [
 		}
 	},
 	{
-		name: 'powerShell',
-		description: 'execute a command in powershell',
+		name: 'shell',
+		description: 'Execute bash commands',
 		parametersJsonSchema : {
 			type: 'object',
 			properties : {
@@ -84,16 +85,11 @@ export const toolMapping: Record<string, (args: Record<string, unknown>) => Prom
 		await writeFile(path,args.content as string)
 		return "success!"
 	},
-	powerShell: async(args) => {
-		// const process = spawn(args.command as string,args.arguments as string[],{shell: true})
-		// let result = ""
-		// process.stdout.on('data',(data) =>{
-		// 	result += data.toString()
-		// })
-		const promise = promisify(exec)
-
-		const {stdout,stderr} = await promise(args.command as string)
-
+	shell: async(args) => {
+		
+		var result = ""
+		const execPromised = promisify(exec)
+		const {stdout,stderr}= await execPromised(args.command as string,{shell: "C:\\Program Files\\Git\\bin\\bash.exe" })
 		return ` ${args.command} | ${stdout}`
 	}
 

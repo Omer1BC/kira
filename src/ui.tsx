@@ -2,7 +2,8 @@ import React, {useState, memo} from 'react';
 import {Text, Box, useInput, useApp} from 'ink';
 import { useStateSnapshotContext } from './contexts/stateSnapshotContext.js';
 import type { History, Tool } from './messages.js';
-import { MarkdownText } from '@assistant-ui/react-ink-markdown';
+import { MarkdownText, useShikiHighlighter } from '@assistant-ui/react-ink-markdown';
+
 
 const ToolBubble = ({tool, focused, onDecision}: {tool: Tool, focused: boolean, onDecision: (id: string, decision: 'accept' | 'reject') => void}) => {
 	const statusColor = tool.status === 'complete' ? 'green' : tool.status === 'rejected' ? 'red' : 'gray'
@@ -21,11 +22,11 @@ const ToolBubble = ({tool, focused, onDecision}: {tool: Tool, focused: boolean, 
 }
 
 const Bubble = ({msg}: {msg: History}) => (
-	<Box flexDirection="column" marginBottom={1}>
+	<Box flexDirection="column" marginBottom={0}>
 		<Text color={msg.role === 'user' ? 'blueBright' : 'green'} bold>
 			{msg.role === 'user' ? 'You' : 'AI'} <Text dimColor>{msg.time}</Text>
 		</Text>
-		<MarkdownText text={msg.value} />
+		<MarkdownText highlighter={useShikiHighlighter({theme: 'github-dark'})!} text={msg.value} />
 	</Box>
 );
 
@@ -63,7 +64,7 @@ export const App = () => {
 	});
 
 	return (
-		<Box flexDirection="column" width="100%">
+		<Box flexDirection="column"  width="100%">
 			<Box flexDirection="column" paddingX={1} paddingY={1} minHeight={18}>
 				{history.map((msg) => (
 					msg.role === 'tool'
