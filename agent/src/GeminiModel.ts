@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import type { RefObject } from 'react';
-import type { Tool, Message, History } from './messages.js';
+import type { Tool, ToolStub, Message, History } from './messages.js';
 import { time, newId } from './metadata.js';
 import { Model } from './Model.js';
 import type { Content, Part, GenerateContentResponse } from '@google/genai';
@@ -21,7 +21,7 @@ export class GeminiModel extends Model<Content> {
 
 	}
 
-	async *fetchAsNormalizedStream(historyRef: RefObject<History[]>): AsyncIterable<Tool | Message> {
+	async *fetchAsNormalizedStream(historyRef: RefObject<History[]>): AsyncIterable<ToolStub | Message> {
 		try {
 			const stream =  await this.#client.models.generateContentStream({
 				model: MODEL,
@@ -36,7 +36,7 @@ export class GeminiModel extends Model<Content> {
 				const fnParts = chunk.candidates?.[0]?.content?.parts?.filter(p => p.functionCall) ?? []
 				if (fnParts.length)
 					for (const part of fnParts) {
-						yield this._normalizeToolChunk(newId(), part)
+						yield this.getToolStub(newId(), part)
 					}
 				else if (chunk.text) {
 					yield this._normalizeResponseChunk(respId,chunk)
@@ -52,25 +52,25 @@ export class GeminiModel extends Model<Content> {
 		return {id,role: 'model',value: chunk.text!,time: time()}
 	}
 
-	_normalizeToolChunk(id: string, part: Part): Tool {
-		return { id, status: 'loaded', role: 'tool', time: time(), function: part.functionCall!.name!, args: part.functionCall!.args!, thoughtSignature: part.thoughtSignature, controller: new AbortController(), value: '' }
+	getToolStub(id: string, part: Part): ToolStub {
+		return { type: 'toolStub', id, time: time(), function: part.functionCall!.name!, args: part.functionCall!.args!, thoughtSignature: part.thoughtSignature }
 	}
 
 	normalizeHistory(history: History[]): Content[] {
 		const filtered = this.filterHistory(history)
-			.filter(elem => elem.role !== 'tool' || (elem as Tool).status === 'complete')
+			.filter(elem => elem.role !== 'tool' || ['complete', 'rejected'].includes((elem as Tool).status))
 
 		const result: Content[] = []
 		let i = 0
 		while (i < filtered.length) {
-			const elem = filtered[i]
+			const elem = filtered[i]!
 			if (elem.role === 'tool') {
 				const group: Tool[] = []
-				while (i < filtered.length && filtered[i].role === 'tool') {
+				while (i < filtered.length && filtered[i]!.role === 'tool') {
 					group.push(filtered[i] as Tool)
 					i++
 				}
-				result.push({ role: 'model', parts: group.map(t => ({ functionCall: { name: t.function, args: t.args }, thoughtSignature: t.thoughtSignature })) })
+				result.push({ role: 'model', parts: group.map(t => ({ functionCall: { name: t.function, args: t.args }, ...(t.thoughtSignature !== undefined && { thoughtSignature: t.thoughtSignature }) })) })
 				result.push({ role: 'user',  parts: group.map(t => ({ functionResponse: { name: t.function, response: { result: t.value } } })) })
 			} else {
 				result.push({ role: elem.role as 'user' | 'model', parts: [{ text: elem.value }] })

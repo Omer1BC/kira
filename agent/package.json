@@ -27,6 +27,7 @@
   "dependencies": {
     "@assistant-ui/react-ink-markdown": "^0.0.28",
     "@google/genai": "^2.8.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/react": "^19.2.14",
     "axios": "^1.15.2",
     "ink": "^7.0.1",

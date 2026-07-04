@@ -1,11 +1,11 @@
 import type { RefObject } from 'react';
-import type { Tool, Message, History } from './messages.js';
+import type { ToolStub, Message, History } from './messages.js';
 
 export abstract class Model<APIMessage> {
 	protected controller: AbortController = new AbortController();
 
 	// must time stamp responses
-	abstract fetchAsNormalizedStream(historyRef: RefObject<History[]>): AsyncIterable<Tool | Message>;
+	abstract fetchAsNormalizedStream(historyRef: RefObject<History[]>): AsyncIterable<ToolStub | Message>;
 
 	get signal(): AbortSignal {
 		return this.controller.signal;
@@ -23,6 +23,6 @@ export abstract class Model<APIMessage> {
 	abstract normalizeHistory(history: History[]): APIMessage[];
 
 	abstract _normalizeResponseChunk(id: string, chunk: unknown): Message;
-	abstract _normalizeToolChunk(id: string, chunk: unknown): Tool;
+	abstract getToolStub(id: string, chunk: unknown): ToolStub;
 
 }

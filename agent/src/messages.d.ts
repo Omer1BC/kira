@@ -18,7 +18,16 @@ export interface Tool {
 	args: Record<string, unknown>;
 	controller: AbortController;
 	value: string;
-	thoughtSignature?: string;
+	thoughtSignature?: string | undefined;
+}
+
+export interface ToolStub {
+	type: 'toolStub';
+	id: string;
+	time: string;
+	function: string;
+	args: Record<string, unknown>;
+	thoughtSignature?: string | undefined;
 }
 
 

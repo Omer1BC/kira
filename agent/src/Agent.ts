@@ -28,10 +28,11 @@ export class Agent {
 			const stream = this.model.fetchAsNormalizedStream(this.messageManager.historyRef)
 			try {
 				for await (const chunk of stream) {
-					if (chunk.role === 'tool') this.toolManager.enqueue(chunk)
-					yield chunk
+					if ('type' in chunk) yield this.toolManager.enqueue(chunk)
+					else yield chunk
 				}
 			} catch (error) {
+				this.toolManager.clearQueue()
 				yield this.messageManager.terminalMessage(error instanceof Error ? error.message : String(error))
 				return
 			}
@@ -39,15 +40,10 @@ export class Agent {
 			if (!this.toolManager.queueLength) break
 
 			const approvalSignal = this.model.signal
+			this.toolManager.abortOn(approvalSignal)
 
-			for await (const {id, decision} of this.toolManager.awaitApproval(approvalSignal)) {
-				const tool = this.messageManager.getById(id) as Tool
-				yield {...tool, status: decision === 'accept' ? 'pending' : 'rejected'}
-			}
-
-			for await (const {id, result} of this.toolManager.executeTools((id) => this.messageManager.getById(id))) {
-				const tool = this.messageManager.getById(id) as Tool
-				yield {...tool, status: 'complete', value: result}
+			for (const tool of this.toolManager.queued()) {
+				yield* tool.execute()
 			}
 
 			this.toolManager.clearQueue()

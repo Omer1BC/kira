@@ -1,60 +1,43 @@
-import type { Tool, Approval } from './messages.js';
-import type { History } from './messages.js';
-import { EventEmitter } from 'events'
-import { toolMapping } from './Tools.js';
+import type { Approval, ToolStub, Tool } from './messages.js';
+import type { ExecutableTool } from './ExecutableTool.js';
+import { toolRegistry } from './Tools.js';
 
 export class ToolManager {
-	private queue: string[];
-	#emitter: EventEmitter
+	#tools: Map<string, ExecutableTool>
 
 	constructor() {
-		this.queue = []
-		this.#emitter = new EventEmitter()
+		this.#tools = new Map()
 	}
 
 	get queueLength(): number {
-		return this.queue.length;
+		return this.#tools.size;
 	}
 
-	enqueue(chunk: Tool): void {
-		this.queue.push(chunk.id)
+	enqueue(stub: ToolStub): Tool {
+		const Ctor = toolRegistry.get(stub.function)!
+		const tool = new Ctor(stub)
+		this.#tools.set(tool.id, tool)
+		return tool.snapshot('loaded')
 	}
 
 	clearQueue(): void {
-		this.queue = []
+		this.#tools.clear()
 	}
 
-	handleToolApproval(id: string, decision: Approval): void {
-		this.#emitter.emit(id, decision)
+	handleToolApproval(id: string, decision: Approval, reason?: string): void {
+		this.#tools.get(id)?.decide(decision, reason)
 	}
 
-	async *awaitApproval(signal?: AbortSignal): AsyncIterable<{id: string, decision: Approval}> {
-		if (signal) {
-			signal.addEventListener('abort', () => {
-				for (const id of this.queue) this.#emitter.emit(id, 'reject')
-			}, {once: true})
+	abortOn(signal: AbortSignal): void {
+		const abortAll = () => { for (const tool of this.#tools.values()) tool.abort() }
+		if (signal.aborted) {
+			abortAll()
+			return
 		}
-
-
-		for (const id of this.queue) {
-			const decision = await new Promise<Approval>(resolve => {
-				this.#emitter.once(id, resolve)
-			})
-			yield {id, decision}
-		}
+		signal.addEventListener('abort', abortAll, {once: true})
 	}
 
-	async *executeTools(lookup: (id: string) => History | undefined): AsyncIterable<{id: string, result: string}> {
-		for (const id of this.queue) {
-			const entry = lookup(id)
-			if (!entry || entry.role !== 'tool' || (entry as Tool).status !== 'pending') continue
-			const tool = entry as Tool
-			try {
-				const result = await toolMapping[tool.function]!(tool.args)
-				yield {id, result}
-			} catch (error) {
-				yield {id, result: error instanceof Error ? error.message : String(error)}
-			}
-		}
+	queued(): ExecutableTool[] {
+		return [...this.#tools.values()]
 	}
 }
