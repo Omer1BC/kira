@@ -10,8 +10,6 @@ import http from "http";
 // Your extension is activated the very first time the command is executed
 export async function activate(context: vscode.ExtensionContext) {
 	
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
 	console.error('Congratulations, your extension "backend" is now active!');
 
 	let proposedContent = ""

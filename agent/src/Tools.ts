@@ -115,11 +115,7 @@ class WriteTool extends ExecutableTool {
 			change: this.stub.args.content,
 			}
 		})
-		
-
-
 	}
-
 
 	protected async call(args: Record<string, unknown>, signal: AbortSignal): Promise<string> {
 		const path = args.path as string
