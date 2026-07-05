@@ -44,5 +44,7 @@
     "noUncheckedSideEffectImports": true,
     "moduleDetection": "force",
     "skipLibCheck": true,
+    "jsxImportSource": "@opentui/react",
+
   }
 }
