@@ -6,6 +6,7 @@ import { ToolManager } from './ToolManager.js';
 import { GeminiModel } from './GeminiModel.js';
 import type { Model } from './Model.js';
 
+
 export class Agent {
 	model: Model<unknown>
 	toolManager: ToolManager
