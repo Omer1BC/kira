@@ -42,10 +42,10 @@ export const App = () => {
 					prev = ( prev + 1 ) % pendingTools.length
 				)
 			}
-			else if (key.name == 'y') {
+			else if (key.name == 'a') {
 				agent.toolManager.handleToolApproval(pendingTools[focusedToolIndex]?.id!,'accept')
 			}
-			else if (key.name == 'n') {
+			else if (key.name == 'r') {
 				agent.toolManager.handleToolApproval(pendingTools[focusedToolIndex]?.id!,'reject')
 			}
 		}
@@ -54,7 +54,7 @@ export const App = () => {
 
 	
 	function Response({msg} : {key: string,msg : History}  )  {
-		return (<box>
+		return (<box style={{...(msg.role === 'user' && {backgroundColor: RGBA.fromHex('#2c2c2c')}) }}>
 			{ msg.role === 'model' ? <markdown syntaxStyle={RESPONSE_SYNTAX_STYLE} content={msg.value} concealCode={false}></markdown> : <text>{msg.value}</text>}
 		</box>)
 	}
@@ -68,24 +68,40 @@ export const App = () => {
 
 		return ( 
 		<box style={{border: focused}}>
-			<text>{`${tool.function}(${displayArgs})`}
-			</text>
-			<text fg={statusColor}>{tool.status}</text>
-			{tool.status === 'loaded' && focused && <text>Y/N</text>}
-			{tool.value && <text>{tool.value}</text>}
+			<box style={{flexDirection: 'row'}}>
+				<text fg={statusColor}>{'>>>'}</text>
+				<text>{`${tool.function}(${displayArgs})`}
+				</text>
+			</box>
+
+			{/* {tool.status === 'loaded' && focused && <text>Y/N</text>} */}
+			{/* {tool.value && <text>{tool.value}</text>} */}
 		</box>
 		)
 	}
 	
 
 	return (
-			<box style={{ border: true, padding: 2, flexDirection: 'column', height: '100%', gap: 1}}>
+			<box style={{  padding: 1, flexDirection: 'column', height: '100%', gap: 1}}>
+
 				<scrollbox 
 					style={{ flexGrow: 1}}
 					contentOptions={{gap: 1}}
 					stickyScroll
 					stickyStart='bottom'
 					focused>
+						<box style={{border: true, padding:1,width: 'auto'}}>
+							<text>
+{`██╗  ██╗██╗██████╗  █████╗ 
+██║ ██╔╝██║██╔══██╗██╔══██╗
+█████╔╝ ██║██████╔╝███████║
+██╔═██╗ ██║██╔══██╗██╔══██║
+██║  ██╗██║██║  ██║██║  ██║
+╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
+`}
+							</text>
+						</box>
+
 					{history.map((msg) => 
 						(msg.role == 'tool' ? <Tool focused={pendingTools[focusedToolIndex] !== undefined && pendingTools[focusedToolIndex].id === msg.id} tool={msg}/> 
 						: <Response key={msg.id} msg={msg} /> ) )}
@@ -94,13 +110,12 @@ export const App = () => {
 				{pendingTools.length == 0 && <input
 					style={{backgroundColor: '000f00'}}
 					value={input}
+					focused={pendingTools.length === 0}
 					onInput={setInput}
 					onSubmit={handleSubmit}
-					placeholder='enter message'
+					placeholder='Need help?'
 				/>}
 			</box>
-				
-
 	)
 
 }
